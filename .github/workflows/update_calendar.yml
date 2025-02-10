@@ -16,6 +16,8 @@ jobs:
           python-version: '3.x'
       - name: Install dependencies
         run: python3 -m pip install requests icalendar
+      - name: List repository files for debugging
+        run: ls -la
       - name: Run update script
         run: python3 update_calendar.py || exit 1
       - name: Commit changes
