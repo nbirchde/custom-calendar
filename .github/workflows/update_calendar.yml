@@ -2,7 +2,7 @@ name: Update Calendar
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Runs at the top of every hour
+    - cron: '*/30 * * * *'  # Runs every 30 minutes
   workflow_dispatch:
 
 jobs:
@@ -15,14 +15,14 @@ jobs:
         with:
           python-version: '3.x'
       - name: Install dependencies
-        run: pip install requests icalendar
+        run: python3 -m pip install requests icalendar
       - name: Run update script
-        run: python update_calendar.py
+        run: python3 update_calendar.py || exit 1
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git status
           git add custom_calendar.ics
           git commit -m "Update custom calendar" || echo "No changes to commit"
           git push
-
