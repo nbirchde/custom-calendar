@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install requests icalendar
       - name: Run update script
-        run: python3 update_calendar.py || exit 1
+        run: python3 custom-calendar/update_calendar.py || exit 1
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
