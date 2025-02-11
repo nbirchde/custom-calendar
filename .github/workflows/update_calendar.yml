@@ -30,7 +30,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           git fetch origin
-          git pull --rebase origin main
+          git rebase origin/main
           git add custom_calendar.ics
           git commit -m "Update custom calendar" || echo "No changes to commit"
-          git push origin main
+          git push origin main --force-with-lease
