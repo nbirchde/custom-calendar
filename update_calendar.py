@@ -2,6 +2,7 @@ import requests
 from icalendar import Calendar, Event
 import re
 import os
+import shutil
 
 # Mapping: course code -> (Name, Color, Category)
 course_mapping = {
@@ -63,6 +64,11 @@ def clean_faculty_info(text):
     return text.strip()
 
 def update_calendar(ics_url, output_dir):
+    # Clean output directory first
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
+    
     # Convert "webcal" to "https"
     if ics_url.startswith("webcal://"):
         ics_url = "https://" + ics_url[len("webcal://"):]
@@ -137,13 +143,17 @@ def update_calendar(ics_url, output_dir):
                 calendars[cal_key].add_component(new_event)
     
     # Write each calendar to a separate file
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
     for (course_name, event_type), cal in calendars.items():
-        # Create URL-safe filename by replacing spaces and special chars with underscores
+        # Create URL-safe filename - replace all non-alphanumeric chars with underscores
         safe_name = re.sub(r'[^a-zA-Z0-9]', '_', course_name)
         safe_type = re.sub(r'[^a-zA-Z0-9]', '_', event_type)
+        # Remove multiple consecutive underscores
+        safe_name = re.sub(r'_+', '_', safe_name)
+        safe_type = re.sub(r'_+', '_', safe_type)
+        # Remove leading/trailing underscores
+        safe_name = safe_name.strip('_')
+        safe_type = safe_type.strip('_')
+        
         filename = f"custom_calendar_{safe_name}_{safe_type}.ics"
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "wb") as f:
