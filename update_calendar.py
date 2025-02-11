@@ -141,7 +141,10 @@ def update_calendar(ics_url, output_dir):
         os.makedirs(output_dir)
     
     for (course_name, event_type), cal in calendars.items():
-        filename = f"custom_calendar_{course_name}_{event_type}.ics"
+        # Create URL-safe filename by replacing spaces and special chars with underscores
+        safe_name = re.sub(r'[^a-zA-Z0-9]', '_', course_name)
+        safe_type = re.sub(r'[^a-zA-Z0-9]', '_', event_type)
+        filename = f"custom_calendar_{safe_name}_{safe_type}.ics"
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "wb") as f:
             f.write(cal.to_ical())
