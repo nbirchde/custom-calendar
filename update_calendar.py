@@ -2,13 +2,13 @@ import requests
 from icalendar import Calendar, Event
 import re
 
-# Mapping: course code -> (New Name, Color)
+# Mapping: course code -> (Name, Color, Category)
 course_mapping = {
-    "INFOH3000": ("Recherche opérationnelle", "#1E90FF"),
-    "ELECH310": ("Digital electronics", "#FF4500"),
-    "INFOH303": ("Bases de données", "#32CD32"),
-    "TRANH3001": ("Epistémologie des sciences et éthique de l'ingénieur", "#8A2BE2"),
-    "INFOF307": ("Génie logiciel et gestion de projets", "#FFA500")
+    "INFOH3000": ("RO", "#1E90FF", "Research"),
+    "ELECH310": ("Digital electronics", "#FF4500", "Electronics"),
+    "INFOH303": ("Bases de données", "#32CD32", "Databases"),
+    "TRANH3001": ("Éthique", "#8A2BE2", "Ethics"),
+    "INFOF307": ("Génie logiciel et gestion de projets", "#FFA500", "Software")
 }
 
 def unescape_ics(text):
@@ -45,6 +45,21 @@ def clean_location(location):
     if location.startswith("Salle: "):
         location = location[7:]
     return location
+
+def clean_faculty_info(text):
+    """Remove faculty-related text."""
+    if not text:
+        return text
+    # Remove Electromécanique references
+    text = re.sub(r'Electromécanique [0-9]+', '', text)
+    # Remove all B-IRCI related text including Informatique suffix
+    text = re.sub(r'B-IRCI:?\d*\s*-?\s*[^,]*', '', text)
+    # Remove other faculty codes
+    text = re.sub(r'B-[A-Z]+:[0-9]+', '', text)
+    # Clean up any remaining artifacts
+    text = re.sub(r'\s*,\s*,\s*', ', ', text)
+    text = re.sub(r'\s*-\s*$', '', text)
+    return text.strip()
 
 def update_calendar(ics_url, output_file):
     # Convert "webcal" to "https"
@@ -86,27 +101,18 @@ def update_calendar(ics_url, output_file):
             if course_code:
                 new_event = Event()
                 
-                # Get the clean course name and color
-                course_name, color = course_mapping[course_code]
+                # Get the clean course name, color and category
+                course_name, color, category = course_mapping[course_code]
                 
                 # Get event type (théorie, exercices, or Labo)
                 event_type = get_event_type(summary_unescaped)
                 
-                # Find faculty token (B-IRCI)
-                faculty_token = None
-                for token in summary_unescaped.split(','):
-                    token = token.strip()
-                    if "B-IRCI:" in token:
-                        faculty_token = token
-                        break
-                
-                # Build new clean summary
+                # Build new clean summary (without faculty tokens)
                 parts = [course_name]
                 if event_type:
                     parts.append(event_type)
-                if faculty_token:
-                    parts.append(faculty_token)
-                new_summary = ", ".join(parts)
+                # Clean up any faculty/department info
+                new_summary = clean_faculty_info(", ".join(parts))
                 
                 new_event.add("summary", new_summary)
                 new_event.add("dtstart", component["dtstart"].dt)
@@ -117,7 +123,10 @@ def update_calendar(ics_url, output_file):
                 if location:
                     new_event.add("location", location)
                 
-                # Set color (lighter for exercises/labs)
+                # Add category for color coding in iCal
+                new_event.add("categories", [category])
+                
+                # Also keep the color property as backup
                 new_event.add("X-APPLE-CALENDAR-COLOR", color)
                 
                 # Copy other essential properties
