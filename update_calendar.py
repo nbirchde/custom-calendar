@@ -1,6 +1,7 @@
 import requests
 from icalendar import Calendar, Event
 import re
+import os
 
 # Mapping: course code -> (Name, Color, Category)
 course_mapping = {
@@ -58,10 +59,10 @@ def clean_faculty_info(text):
     text = re.sub(r'B-[A-Z]+:[0-9]+', '', text)
     # Clean up any remaining artifacts
     text = re.sub(r'\s*,\s*,\s*', ', ', text)
-    text = re.sub(r'\s*-\s*$', '', text)
+    text = re.sub(r'\s*-?\s*$', '', text)
     return text.strip()
 
-def update_calendar(ics_url, output_file):
+def update_calendar(ics_url, output_dir):
     # Convert "webcal" to "https"
     if ics_url.startswith("webcal://"):
         ics_url = "https://" + ics_url[len("webcal://"):]
@@ -70,16 +71,9 @@ def update_calendar(ics_url, output_file):
     response.raise_for_status()
     
     old_cal = Calendar.from_ical(response.text)
-    new_cal = Calendar()
-    
-    # Copy over required properties
-    for prop in ['VERSION', 'PRODID', 'CALSCALE', 'METHOD']:
-        if prop in old_cal:
-            new_cal.add(prop, old_cal[prop])
-    
-    # Debug counter
-    processed = 0
-    
+    calendars = {}
+
+    # Create a new calendar for each (course, event type) combination
     for component in old_cal.walk():
         if component.name == "VEVENT":
             # Get raw summary and unescape it
@@ -95,12 +89,9 @@ def update_calendar(ics_url, output_file):
             for code in course_mapping:
                 if code in summary_unescaped:
                     course_code = code
-                    processed += 1
                     break
             
             if course_code:
-                new_event = Event()
-                
                 # Get the clean course name, color and category
                 course_name, color, category = course_mapping[course_code]
                 
@@ -111,9 +102,18 @@ def update_calendar(ics_url, output_file):
                 parts = [course_name]
                 if event_type:
                     parts.append(event_type)
-                # Clean up any faculty/department info
                 new_summary = clean_faculty_info(", ".join(parts))
                 
+                # Create a new calendar if it doesn't exist
+                cal_key = (course_name, event_type)
+                if cal_key not in calendars:
+                    new_cal = Calendar()
+                    for prop in ['VERSION', 'PRODID', 'CALSCALE', 'METHOD']:
+                        if prop in old_cal:
+                            new_cal.add(prop, old_cal[prop])
+                    calendars[cal_key] = new_cal
+                
+                new_event = Event()
                 new_event.add("summary", new_summary)
                 new_event.add("dtstart", component["dtstart"].dt)
                 new_event.add("dtend", component["dtend"].dt)
@@ -134,17 +134,21 @@ def update_calendar(ics_url, output_file):
                     if prop in component:
                         new_event.add(prop, component[prop])
                 
-                new_cal.add_component(new_event)
-            else:
-                # If no course code found, keep original event unchanged
-                new_cal.add_component(component)
+                calendars[cal_key].add_component(new_event)
     
-    print(f"Matched and processed {processed} events")
+    # Write each calendar to a separate file
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
-    with open(output_file, "wb") as f:
-        f.write(new_cal.to_ical())
+    for (course_name, event_type), cal in calendars.items():
+        filename = f"custom_calendar_{course_name}_{event_type}.ics"
+        filepath = os.path.join(output_dir, filename)
+        with open(filepath, "wb") as f:
+            f.write(cal.to_ical())
+    
+    print(f"Processed {len(calendars)} calendars")
 
 if __name__ == "__main__":
     ics_url = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri69j598Y63161QZd6Qtjk5QZ58l18oo6Z971ZnyQ751k07Q247k398F70650Z3E55028C01F2t5B75EDCC98B771Q.ics"
-    output_file = "custom_calendar.ics"
-    update_calendar(ics_url, output_file)
+    output_dir = "calendars"
+    update_calendar(ics_url, output_dir)

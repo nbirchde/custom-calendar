@@ -34,11 +34,11 @@ jobs:
         
       - name: Commit and Push
         run: |
-          git add custom_calendar.ics
+          git add calendars/*.ics
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "Update custom calendar [skip ci]"
+          git commit -m "Update custom calendars [skip ci]"
           git pull --rebase origin main
           git push origin main
