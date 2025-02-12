@@ -111,9 +111,7 @@ def update_calendar(ics_url, output_dir):
                 new_summary = clean_faculty_info(", ".join(parts))
                 
                 # Create a new calendar if it doesn't exist
-                # Use original name format for the key to maintain filename consistency
-                original_name = summary_unescaped.split(',')[0].strip()
-                cal_key = (original_name, event_type)
+                cal_key = (course_name, event_type)
                 if cal_key not in calendars:
                     new_cal = Calendar()
                     for prop in ['VERSION', 'PRODID', 'CALSCALE', 'METHOD']:
@@ -144,9 +142,19 @@ def update_calendar(ics_url, output_dir):
                 
                 calendars[cal_key].add_component(new_event)
     
-    # Write each calendar to a separate file using original naming scheme
-    for (original_name, event_type), cal in calendars.items():
-        filename = f"custom_calendar_{original_name}_{event_type}.ics"
+    # Write each calendar to a separate file
+    for (course_name, event_type), cal in calendars.items():
+        # Create URL-safe filename - replace all non-alphanumeric chars with underscores
+        safe_name = re.sub(r'[^a-zA-Z0-9]', '_', course_name)
+        safe_type = re.sub(r'[^a-zA-Z0-9]', '_', event_type)
+        # Remove multiple consecutive underscores
+        safe_name = re.sub(r'_+', '_', safe_name)
+        safe_type = re.sub(r'_+', '_', safe_type)
+        # Remove leading/trailing underscores
+        safe_name = safe_name.strip('_')
+        safe_type = safe_type.strip('_')
+        
+        filename = f"custom_calendar_{safe_name}_{safe_type}.ics"
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "wb") as f:
             f.write(cal.to_ical())
