@@ -7,10 +7,10 @@ import shutil
 # Mapping: course code -> (Name, Color, Category)
 course_mapping = {
     "INFOH3000": ("RO", "#1E90FF", "Research"),
-    "ELECH310": ("Digital electronics", "#FF4500", "Electronics"),
-    "INFOH303": ("Bases de données", "#32CD32", "Databases"),
+    "ELECH310": ("DE", "#FF4500", "Electronics"),
+    "INFOH303": ("BD", "#32CD32", "Databases"),
     "TRANH3001": ("Éthique", "#8A2BE2", "Ethics"),
-    "INFOF307": ("Génie logiciel et gestion de projets", "#FFA500", "Software")
+    "INFOF307": ("GL", "#FFA500", "Software")
 }
 
 def unescape_ics(text):
@@ -32,11 +32,11 @@ def get_event_type(summary):
     """Return appropriate event type label."""
     summary_lower = summary.lower()
     if "théorie" in summary_lower:
-        return "théorie"
+        return "th"
     elif "travaux pratiques" in summary_lower:
         return "Labo"
     elif "exercices" in summary_lower:
-        return "exercices"
+        return "ex"
     return ""
 
 def clean_location(location):
