@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}  # Using PAT instead of default GITHUB_TOKEN
+          token: ${{ secrets.PAT_TOKEN }}
           
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -24,21 +24,18 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install requests icalendar
         
+      - name: Clean calendars
+        run: rm -rf calendars/*.ics
+        
       - name: Run update script
         run: python3 update_calendar.py
         
-      - name: Configure Git
+      - name: Git setup and push
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-        
-      - name: Commit and Push
-        run: |
+          git fetch origin
+          git reset --hard origin/main
           git add calendars/*.ics
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git commit -m "Update custom calendars [skip ci]"
-          git pull --rebase origin main
+          git commit -m "Update calendars [skip ci]"
           git push origin main
