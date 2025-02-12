@@ -4,13 +4,13 @@ import re
 import os
 import shutil
 
-# Mapping: course code -> (Name, Color, Category)
+# Mapping: course code -> Name
 course_mapping = {
-    "INFOH3000": ("RO", "#1E90FF", "Research"),
-    "ELECH310": ("DE", "#FF4500", "Electronics"),
-    "INFOH303": ("BD", "#32CD32", "Databases"),
-    "TRANH3001": ("Éthique", "#8A2BE2", "Ethics"),
-    "INFOF307": ("GL", "#FFA500", "Software")
+    "INFOH3000": "RO",
+    "ELECH310": "DE",
+    "INFOH303": "BD",
+    "TRANH3001": "Éthique",
+    "INFOF307": "GL"
 }
 
 def unescape_ics(text):
@@ -98,8 +98,8 @@ def update_calendar(ics_url, output_dir):
                     break
             
             if course_code:
-                # Get the clean course name, color and category
-                course_name, color, category = course_mapping[course_code]
+                # Get the clean course name
+                course_name = course_mapping[course_code]
                 
                 # Get event type (théorie, exercices, or Labo)
                 event_type = get_event_type(summary_unescaped)
@@ -130,12 +130,6 @@ def update_calendar(ics_url, output_dir):
                 location = clean_location(component.get("location", ""))
                 if location:
                     new_event.add("location", location)
-                
-                # Add category for color coding in iCal
-                new_event.add("categories", [category])
-                
-                # Also keep the color property as backup
-                new_event.add("X-APPLE-CALENDAR-COLOR", color)
                 
                 # Copy other essential properties
                 for prop in ["UID", "DTSTAMP", "LAST-MODIFIED"]:
