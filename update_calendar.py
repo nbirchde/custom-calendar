@@ -4,26 +4,23 @@ import re
 import os
 import shutil
 
-# Mapping: course code -> (Name, Color, Category)
+# Mapping: course code -> Name
 course_mapping = {
-    "INFOH3000": ("RO", "#1E90FF", "Research"),
-    "ELECH310": ("DE", "#FF4500", "Electronics"),
-    "INFOH303": ("BD", "#32CD32", "Databases"),
-    "TRANH3001": ("Éthique", "#8A2BE2", "Ethics"),
-    "INFOF307": ("GL", "#FFA500", "Software")
+    "INFOH3000": "RO",
+    "ELECH310": "DE",
+    "INFOH303": "BD",
+    "TRANH3001": "Éthique",
+    "INFOF307": "GL"
 }
 
 def unescape_ics(text):
     """Un-escape ICS text properly handling backslash escapes."""
     if not text:
         return ""
-    # First replace \\ with temporary marker
     text = text.replace("\\\\", "\uE000")
-    # Then handle other escapes
     text = text.replace("\\,", ",")
     text = text.replace("\\;", ";")
     text = text.replace("\\n", "\n")
-    # Finally restore \\ and remove any remaining single \
     text = text.replace("\uE000", "\\")
     text = text.replace("\\", "")
     return text
@@ -52,24 +49,18 @@ def clean_faculty_info(text):
     """Remove faculty-related text."""
     if not text:
         return text
-    # Remove Electromécanique references
     text = re.sub(r'Electromécanique [0-9]+', '', text)
-    # Remove all B-IRCI related text including Informatique suffix
     text = re.sub(r'B-IRCI:?\d*\s*-?\s*[^,]*', '', text)
-    # Remove other faculty codes
     text = re.sub(r'B-[A-Z]+:[0-9]+', '', text)
-    # Clean up any remaining artifacts
     text = re.sub(r'\s*,\s*,\s*', ', ', text)
     text = re.sub(r'\s*-?\s*$', '', text)
     return text.strip()
 
 def update_calendar(ics_url, output_dir):
-    # Clean output directory first
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
     
-    # Convert "webcal" to "https"
     if ics_url.startswith("webcal://"):
         ics_url = "https://" + ics_url[len("webcal://"):]
     
@@ -79,18 +70,14 @@ def update_calendar(ics_url, output_dir):
     old_cal = Calendar.from_ical(response.text)
     calendars = {}
 
-    # Create a new calendar for each (course, event type) combination
     for component in old_cal.walk():
         if component.name == "VEVENT":
-            # Get raw summary and unescape it
             summary_raw = str(component.get("summary", ""))
             summary_unescaped = unescape_ics(summary_raw)
             
-            # Skip info events
             if summary_unescaped.startswith("Info:"):
                 continue
             
-            # Look for course code in unescaped summary
             course_code = None
             for code in course_mapping:
                 if code in summary_unescaped:
@@ -98,13 +85,9 @@ def update_calendar(ics_url, output_dir):
                     break
             
             if course_code:
-                # Get the clean course name, color and category
-                course_name, color, category = course_mapping[course_code]
-                
-                # Get event type (théorie, exercices, or Labo)
+                course_name = course_mapping[course_code]
                 event_type = get_event_type(summary_unescaped)
                 
-                # Build new clean summary (without faculty tokens)
                 parts = [course_name]
                 if event_type:
                     parts.append(event_type)
@@ -124,18 +107,11 @@ def update_calendar(ics_url, output_dir):
                 new_event.add("dtstart", component["dtstart"].dt)
                 new_event.add("dtend", component["dtend"].dt)
                 
-                # Clean up location
                 location = clean_location(component.get("location", ""))
                 if location:
                     new_event.add("location", location)
                 
-                # Add category for color coding in iCal
-                new_event.add("categories", [category])
-                
-                # Also keep the color property as backup
-                new_event.add("X-APPLE-CALENDAR-COLOR", color)
-                
-                # Copy other essential properties
+                # Only copy essential properties, skip colors and categories
                 for prop in ["UID", "DTSTAMP", "LAST-MODIFIED"]:
                     if prop in component:
                         new_event.add(prop, component[prop])
