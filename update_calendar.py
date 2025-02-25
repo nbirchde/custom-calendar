@@ -62,14 +62,21 @@ def update_calendar(ics_url, output_dir):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
     
-    if ics_url.startswith("webcal://"):
-        ics_url = "https://" + ics_url[len("webcal://"):]
+    print(f"Processing calendar from {ics_url}")
     
-    print(f"Downloading calendar from {ics_url}")
-    response = requests.get(ics_url)
-    response.raise_for_status()
+    # Handle local files for testing
+    if ics_url.startswith('file://'):
+        local_path = ics_url[7:]  # Remove file:// prefix
+        with open(local_path, 'r') as f:
+            calendar_data = f.read()
+    else:
+        if ics_url.startswith("webcal://"):
+            ics_url = "https://" + ics_url[len("webcal://"):]
+        response = requests.get(ics_url)
+        response.raise_for_status()
+        calendar_data = response.text
     
-    old_cal = Calendar.from_ical(response.text)
+    old_cal = Calendar.from_ical(calendar_data)
     calendars = {}
     processed_events = 0
     skipped_events = 0
