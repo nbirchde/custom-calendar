@@ -1,0 +1,8 @@
+2025-02-25 09:20:11,890 - INFO - Downloading calendar from https://example.com/calendar.ics
+2025-02-25 09:20:11,891 - INFO - Processing calendar events...
+2025-02-25 09:20:11,891 - INFO - Created custom_calendar_RO_th.ics
+2025-02-25 09:20:11,891 - INFO - Processed 1 events into 1 calendar files
+2025-02-25 09:27:32,332 - INFO - Downloading calendar from https://example.com/calendar.ics
+2025-02-25 09:27:32,332 - INFO - Processing calendar events...
+2025-02-25 09:27:32,332 - INFO - Created custom_calendar_RO_th.ics
+2025-02-25 09:27:32,332 - INFO - Processed 1 events into 1 calendar files
