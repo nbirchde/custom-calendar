@@ -9,7 +9,8 @@ from update_calendar import (
     get_event_type, 
     clean_location, 
     clean_faculty_info,
-    update_calendar
+    update_calendar,
+    original_course_mapping
 )
 
 class TestCalendarFunctions(unittest.TestCase):
@@ -63,7 +64,7 @@ class TestCalendarFunctions(unittest.TestCase):
         test_dir = "test_calendars"
         
         try:
-            update_calendar("https://example.com/calendar.ics", test_dir)
+            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
             
             self.assertTrue(os.path.exists(test_dir))
             files = os.listdir(test_dir)
@@ -106,7 +107,7 @@ class TestCalendarFunctions(unittest.TestCase):
         test_dir = "test_calendars"
         try:
             # Première mise à jour
-            update_calendar("https://example.com/calendar.ics", test_dir)
+            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
             
             # Vérifier le contenu initial
             files = os.listdir(test_dir)
@@ -145,7 +146,7 @@ class TestCalendarFunctions(unittest.TestCase):
             mock_response.text = updated_cal.to_ical().decode('utf-8')
             
             # Deuxième mise à jour
-            update_calendar("https://example.com/calendar.ics", test_dir)
+            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
             
             # Vérifier les mises à jour
             files = os.listdir(test_dir)
@@ -209,7 +210,7 @@ class TestCalendarFunctions(unittest.TestCase):
         
         test_dir = "test_calendars"
         try:
-            update_calendar("https://example.com/calendar.ics", test_dir)
+            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
             
             # Vérifier que seul l'événement valide a été traité
             events = []

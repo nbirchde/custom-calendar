@@ -4,13 +4,26 @@ import re
 import os
 import shutil
 
-# Mapping complet des cours
-course_mapping = {
+# Mapping complet des cours - original calendar
+original_course_mapping = {
     "INFOH3000": "RO",         # Recherche Opérationnelle
     "INFOH303": "BD",          # Base de données
     "INFOF307": "GL",          # Génie Logiciel
     "ELECH310": "DE",          # Digital Electronics
     "TRANH3001": "Éthique"     # Éthique
+}
+
+# Mapping complet des cours - friend's calendar
+friend_course_mapping = {
+    "ELECH310": "ELECH310",    # Digital Electronics
+    "ELECH312": "ELECH312",    # Power Electronics
+    "ELECH313": "ELECH313",    # Instrumentation
+    "ELECH3002": "ELECH3002",  # Instrumentation et Automatique
+    "ELECH314": "ELECH314",    # Advanced Instrumentation
+    "MATHH304": "MATHH304",    # Automatique (Control Systems)
+    "MECAH305": "MECAH305",    # Fluid mechanics II
+    "TRANH3001": "TRANH3001",  # Ethics
+    "BINGF3004": "BINGF3004"   # Scientific English
 }
 
 def unescape_ics(text):
@@ -57,10 +70,9 @@ def clean_faculty_info(text):
     text = re.sub(r',\s*$', '', text)  # Supprime la virgule finale
     return text.strip()
 
-def update_calendar(ics_url, output_dir):
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    os.makedirs(output_dir)
+def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
     print(f"Processing calendar from {ics_url}")
     
@@ -144,7 +156,7 @@ def update_calendar(ics_url, output_dir):
     
     # Écrire chaque calendrier dans un fichier séparé
     for (course_name, event_type), cal in calendars.items():
-        filename = f"custom_calendar_{course_name}_{event_type}.ics"
+        filename = f"{prefix}_{course_name}_{event_type}.ics"
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "wb") as f:
             f.write(cal.to_ical())
@@ -155,7 +167,25 @@ def update_calendar(ics_url, output_dir):
     print(f"- Skipped events: {skipped_events}")
     print(f"- Created calendars: {len(calendars)}")
 
-if __name__ == "__main__":
-    ics_url = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri69j598Y63161QZd6Qtjk5QZ58l18oo6Z971ZnyQ751k07Q247k398F70650Z3E55028C01F2t5B75EDCC98B771Q.ics"
+def process_all_calendars():
     output_dir = "calendars"
-    update_calendar(ics_url, output_dir)
+    
+    # Ensure the output directory exists and is empty
+    if os.path.exists(output_dir):
+        for file_name in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+    else:
+        os.makedirs(output_dir)
+
+    # Process your calendar
+    your_calendar_url = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri69j598Y63161QZd6Qtjk5QZ58l18oo6Z971ZnyQ751k07Q247k398F70650Z3E55028C01F2t5B75EDCC98B771Q.ics"
+    update_calendar(your_calendar_url, output_dir, original_course_mapping, "custom_calendar")
+    
+    # Process your friend's calendar
+    friend_calendar_url = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri666XQZ699Z5QQv2902X2t6y7Y790n39Y1963gQY074Z70ZQdj7150jZ3mQk9n0k1EA8C4966n0oAn54FC664B22jA777Ft04F245847BED5004.ics"
+    update_calendar(friend_calendar_url, output_dir, friend_course_mapping, "friend_calendar")
+
+if __name__ == "__main__":
+    process_all_calendars()
