@@ -39,5 +39,7 @@ jobs:
         
       - name: Commit and push changes
         run: |
+          # Always pull latest changes first to prevent non-fast-forward errors
+          git pull --rebase origin main
           git add calendars/*.ics
           git diff --staged --quiet || (git commit -m "Update calendars [skip ci]" && git push origin main)
