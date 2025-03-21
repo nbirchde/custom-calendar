@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '*/30 * * * *'  # Runs every 30 minutes
   workflow_dispatch:
+  push:
+    paths:
+      - 'force_update.txt'
 
 jobs:
   update:
@@ -13,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}  # Explicitly checkout the latest commit
         
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -31,19 +36,19 @@ jobs:
         run: rm -rf calendars/*.ics
         
       - name: Run update script
-        run: python3 update_calendar.py
-        
-      - name: Commit and push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          git add calendars/*.ics
-          git status
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Changes detected, committing..."
+          python3 update_calendar.py
+          cat debug_info.txt || true  # Show debug info if it exists
+        
+      - name: Check for changes and commit
+        run: |
+          git add calendars/*.ics debug_info.txt || true
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "Changes detected in these files:"
+            git status --porcelain
             git commit -m "Update calendars [skip ci]"
-            git push "https://$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git" HEAD:main
-            echo "Calendars updated successfully"
+            git push origin HEAD:main
           else
-            echo "No changes detected"
-          fi
+            echo "No changes detected in working directory"
+            echo "Git status output:"
+            git status
