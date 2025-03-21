@@ -15,7 +15,6 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN }}
-          persist-credentials: true
           
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -37,13 +36,13 @@ jobs:
       - name: Run update script
         run: python3 update_calendar.py
         
-      - name: Commit and push changes
+      - name: Check if changes exist and commit
         run: |
-          # Stage and commit changes
           git add calendars/*.ics
-          if ! git diff --cached --quiet; then
+          if [[ -n "$(git status --porcelain)" ]]; then
             git commit -m "Update calendars [skip ci]"
-            git push origin main
+            git push https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+            echo "Calendars updated successfully"
           else
             echo "No changes to commit"
           fi
