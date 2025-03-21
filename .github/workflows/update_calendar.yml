@@ -11,11 +11,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
-          
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -26,9 +24,8 @@ jobs:
         
       - name: Git setup
         run: |
-          git config --global core.autocrlf false
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
         
       - name: Clean calendars
         run: rm -rf calendars/*.ics
@@ -36,13 +33,17 @@ jobs:
       - name: Run update script
         run: python3 update_calendar.py
         
-      - name: Check if changes exist and commit
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git add calendars/*.ics
-          if [[ -n "$(git status --porcelain)" ]]; then
+          git status
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Changes detected, committing..."
             git commit -m "Update calendars [skip ci]"
-            git push https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+            git push "https://$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git" HEAD:main
             echo "Calendars updated successfully"
           else
-            echo "No changes to commit"
+            echo "No changes detected"
           fi
