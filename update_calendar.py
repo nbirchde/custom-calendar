@@ -4,6 +4,8 @@ import re
 import os
 import shutil
 import datetime  # Adding datetime import for timestamp
+import random    # For random value to ensure uniqueness
+import string    # For generating random strings
 
 # Mapping complet des cours - original calendar
 original_course_mapping = {
@@ -155,20 +157,22 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
             calendars[cal_key].add_component(new_event)
             processed_events += 1
     
-    # Add current timestamp to ensure calendar files differ on each run
+    # Generate unique identifier with timestamp and random string
     current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    unique_id = f"{current_time}_{random_string}"
     
     # Écrire chaque calendrier dans un fichier séparé
     for (course_name, event_type), cal in calendars.items():
         filename = f"{prefix}_{course_name}_{event_type}.ics"
         filepath = os.path.join(output_dir, filename)
         
-        # Add timestamp to calendar name
+        # Add unique identifier to calendar name for first event
         for component in cal.subcomponents:
             if component.name == "VEVENT":
-                # Modify the first event's summary to include timestamp
+                # Modify the first event's summary to include unique identifier
                 old_summary = component.get("summary", "")
-                component["summary"] = f"{old_summary} (Updated {current_time})"
+                component["summary"] = f"{old_summary} (Updated {unique_id})"
                 break  # Only modify the first event
                 
         with open(filepath, "wb") as f:
