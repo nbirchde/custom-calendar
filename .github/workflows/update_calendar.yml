@@ -14,10 +14,18 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout repository
+      - name: Checkout latest code
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.sha }}  # Explicitly checkout the latest commit
+          fetch-depth: 1
+          token: ${{ secrets.PAT_TOKEN }}
+          
+      - name: Debug info
+        run: |
+          echo "Current commit:"
+          git rev-parse HEAD
+          echo "Branch status:"
+          git status
         
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -33,22 +41,39 @@ jobs:
           git config user.name "github-actions[bot]"
         
       - name: Clean calendars
-        run: rm -rf calendars/*.ics
+        run: |
+          mkdir -p calendars
+          rm -rf calendars/*.ics
         
       - name: Run update script
+        id: update
         run: |
+          # Save state before running script
+          git rev-parse HEAD > before_update.txt
+          
+          # Run the update script
           python3 update_calendar.py
-          cat debug_info.txt || true  # Show debug info if it exists
-        
-      - name: Check for changes and commit
+          
+          # List generated files
+          echo "Generated calendar files:"
+          ls -l calendars/
+          
+      - name: Commit changes
         run: |
-          git add calendars/*.ics debug_info.txt || true
+          # Stage only calendar files
+          git add calendars/*.ics
+          
+          # Show what would be committed
+          echo "Files to be committed:"
+          git status --porcelain
+          
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "Changes detected in these files:"
-            git status --porcelain
+            echo "Changes detected, committing..."
             git commit -m "Update calendars [skip ci]"
             git push origin HEAD:main
           else
-            echo "No changes detected in working directory"
-            echo "Git status output:"
+            echo "No changes to commit"
+            echo "Before update commit: $(cat before_update.txt)"
+            echo "Current commit: $(git rev-parse HEAD)"
+            echo "Repository status:"
             git status

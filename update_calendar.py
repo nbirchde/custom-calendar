@@ -74,6 +74,12 @@ def clean_faculty_info(text):
     text = re.sub(r',\s*$', '', text)  # Supprime la virgule finale
     return text.strip()
 
+def get_git_revision():
+    try:
+        return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()[:8]
+    except:
+        return 'nogit'
+
 def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -158,10 +164,10 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
             calendars[cal_key].add_component(new_event)
             processed_events += 1
     
-    # Generate unique identifier with timestamp and random string
+    # Add git revision to timestamp to ensure uniqueness
     current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    unique_id = f"{current_time}_{random_string}"
+    git_rev = get_git_revision()
+    unique_id = f"{current_time}-{git_rev}"
     
     # Écrire chaque calendrier dans un fichier séparé
     for (course_name, event_type), cal in calendars.items():
