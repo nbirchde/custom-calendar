@@ -14,19 +14,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout latest code
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 1
+          clean: true  # Start with a clean state
+          ref: ${{ github.ref }}  # Explicitly use the triggering ref
           token: ${{ secrets.PAT_TOKEN }}
           
-      - name: Debug info
-        run: |
-          echo "Current commit:"
-          git rev-parse HEAD
-          echo "Branch status:"
-          git status
-        
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -39,6 +33,9 @@ jobs:
         run: |
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          # Lock the repository state
+          git config advice.detachedHead false
+          git checkout -B workflow-run
         
       - name: Clean calendars
         run: |
@@ -46,34 +43,28 @@ jobs:
           rm -rf calendars/*.ics
         
       - name: Run update script
-        id: update
-        run: |
-          # Save state before running script
-          git rev-parse HEAD > before_update.txt
-          
-          # Run the update script
-          python3 update_calendar.py
-          
-          # List generated files
-          echo "Generated calendar files:"
-          ls -l calendars/
-          
-      - name: Commit changes
+        run: python3 update_calendar.py
+        
+      - name: Verify changes
+        id: verify
         run: |
           # Stage only calendar files
           git add calendars/*.ics
           
-          # Show what would be committed
-          echo "Files to be committed:"
-          git status --porcelain
-          
+          # Check if there are changes and store the result
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "Changes detected, committing..."
-            git commit -m "Update calendars [skip ci]"
-            git push origin HEAD:main
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in these files:"
+            git status --porcelain
           else
-            echo "No changes to commit"
-            echo "Before update commit: $(cat before_update.txt)"
-            echo "Current commit: $(git rev-parse HEAD)"
-            echo "Repository status:"
-            git status
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          fi
+          
+      - name: Commit and push if changed
+        if: steps.verify.outputs.has_changes == 'true'
+        run: |
+          echo "Committing changes..."
+          git commit -m "Update calendars [skip ci]"
+          git push origin HEAD:main
+          echo "Calendar updates committed and pushed successfully"
