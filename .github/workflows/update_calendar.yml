@@ -30,9 +30,6 @@ jobs:
           git config --global core.autocrlf false
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git config --global pull.rebase true
-          git clean -fd
-          git reset --hard HEAD
         
       - name: Clean calendars
         run: rm -rf calendars/*.ics
@@ -42,34 +39,11 @@ jobs:
         
       - name: Commit and push changes
         run: |
-          # Configure the remote URL with token for authentication
-          git remote set-url origin https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
-          
-          # Fetch and reset to match remote state exactly
-          git fetch origin main
-          git reset --hard origin/main
-          
           # Stage and commit changes
           git add calendars/*.ics
           if ! git diff --cached --quiet; then
             git commit -m "Update calendars [skip ci]"
-            
-            # Try to push changes with retries
-            max_attempts=3
-            attempt=1
-            while [ $attempt -le $max_attempts ]; do
-              echo "Push attempt $attempt of $max_attempts"
-              if git push origin main; then
-                echo "Push successful"
-                break
-              fi
-              if [ $attempt -eq $max_attempts ]; then
-                echo "Failed to push after $max_attempts attempts"
-                exit 1
-              fi
-              git pull --rebase origin main
-              ((attempt++))
-            done
+            git push origin main
           else
             echo "No changes to commit"
           fi

@@ -3,6 +3,7 @@ from icalendar import Calendar, Event
 import re
 import os
 import shutil
+import datetime  # Adding datetime import for timestamp
 
 # Mapping complet des cours - original calendar
 original_course_mapping = {
@@ -154,10 +155,22 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
             calendars[cal_key].add_component(new_event)
             processed_events += 1
     
+    # Add current timestamp to ensure calendar files differ on each run
+    current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    
     # Écrire chaque calendrier dans un fichier séparé
     for (course_name, event_type), cal in calendars.items():
         filename = f"{prefix}_{course_name}_{event_type}.ics"
         filepath = os.path.join(output_dir, filename)
+        
+        # Add timestamp to calendar name
+        for component in cal.subcomponents:
+            if component.name == "VEVENT":
+                # Modify the first event's summary to include timestamp
+                old_summary = component.get("summary", "")
+                component["summary"] = f"{old_summary} (Updated {current_time})"
+                break  # Only modify the first event
+                
         with open(filepath, "wb") as f:
             f.write(cal.to_ical())
         print(f"Created {filename}")
