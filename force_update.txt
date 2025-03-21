@@ -1,7 +1,8 @@
-Force update triggered at: 2025-03-21 16:02:41
+Force update triggered at: 2025-03-21 16:05:46
 Git Status before update:
 On branch main
-Your branch is up to date with 'origin/main'.
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
 
 Changes not staged for commit:
   (use "git add/rm <file>..." to update what will be committed)
@@ -41,18 +42,18 @@ Debug information:
 Current directory: /Users/nicholasbirchdelacalle/Documents/GitHub/custom-calendar
 Repository files:
 total 120
-drwxr-xr-x@ 15 nicholasbirchdelacalle  staff    480 Mar 21 16:02 .
-drwxr-xr-x@  6 nicholasbirchdelacalle  staff    192 Mar 21 16:02 ..
-drwxr-xr-x@ 15 nicholasbirchdelacalle  staff    480 Mar 21 16:02 .git
+drwxr-xr-x@ 15 nicholasbirchdelacalle  staff    480 Mar 21 16:05 .
+drwxr-xr-x@  6 nicholasbirchdelacalle  staff    192 Mar 21 16:05 ..
+drwxr-xr-x@ 15 nicholasbirchdelacalle  staff    480 Mar 21 16:05 .git
 -rw-r--r--@  1 nicholasbirchdelacalle  staff     66 Feb 12 17:34 .gitattributes
-drwxr-xr-x@  3 nicholasbirchdelacalle  staff     96 Mar 21 16:02 .github
+drwxr-xr-x@  3 nicholasbirchdelacalle  staff     96 Mar 21 16:05 .github
 -rw-r--r--@  1 nicholasbirchdelacalle  staff     54 Feb 25 09:41 README.md
 drwxr-xr-x@  4 nicholasbirchdelacalle  staff    128 Mar  9 17:12 __pycache__
 -rw-r--r--@  1 nicholasbirchdelacalle  staff    592 Feb 25 09:29 calendar_update.log
 drwxr-xr-x@ 25 nicholasbirchdelacalle  staff    800 Mar 21 15:44 calendars
 -rw-r--r--@  1 nicholasbirchdelacalle  staff  11980 Feb 12 18:23 custom_calendar.ics
 -rwxr-xr-x@  1 nicholasbirchdelacalle  staff    609 Mar 21 16:01 force_update.sh
--rw-r--r--@  1 nicholasbirchdelacalle  staff   1914 Mar 21 16:02 force_update.txt
+-rw-r--r--@  1 nicholasbirchdelacalle  staff   1968 Mar 21 16:05 force_update.txt
 -rw-r--r--@  1 nicholasbirchdelacalle  staff    614 Feb 25 13:17 test_timeedit.ics
 -rw-r--r--@  1 nicholasbirchdelacalle  staff   9915 Mar 10 10:56 test_update_calendar.py
--rw-r--r--@  1 nicholasbirchdelacalle  staff   9014 Mar 21 16:00 update_calendar.py
+-rw-r--r--@  1 nicholasbirchdelacalle  staff   9109 Mar 21 16:05 update_calendar.py
