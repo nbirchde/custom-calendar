@@ -37,23 +37,13 @@ jobs:
           git config advice.detachedHead false
           git checkout -B workflow-run
         
-      - name: Record existing files
+      - name: Clean directory for fresh rebuild
         run: |
-          # Create a list of existing calendar files for comparison later
+          # Ensure calendars directory exists
           mkdir -p calendars
-          find calendars -name "*.ics" > existing_calendars.txt || echo "No existing calendars found"
-        
-      - name: Clean and run update script
-        run: |
-          # First remove problematic file if it exists (fix for ELECH3002)
-          if [ -f "calendars/friend_calendar_ELECH3002_th.ics" ]; then
-            echo "Removing problematic file manually"
-            git rm -f calendars/friend_calendar_ELECH3002_th.ics
-            git commit -m "Remove ELECH3002_th.ics file [skip ci]"
-          fi
           
-          # Clean directory first
-          mkdir -p calendars
+          # First clean everything
+          git rm -rf --ignore-unmatch calendars/*.ics
           rm -rf calendars/*.ics
           
           # Run the update script
@@ -64,28 +54,19 @@ jobs:
             rm debug_info.txt
           fi
           
-      - name: Detect and commit changes
+      - name: Commit changes
         run: |
-          # Detect which files existed before but don't exist now
-          for file in $(cat existing_calendars.txt); do
-            if [ ! -f "$file" ]; then
-              echo "Detected deleted file: $file"
-              git rm -f "$file" || echo "File $file was not tracked"
-            fi
-          done
-          
-          # Add all new and modified files
+          # Add all new calendar files
           git add calendars/*.ics
           
           # Check if there are changes to commit
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Changes detected:"
-            git status --porcelain
+          if [ -n "$(git status --porcelain | grep -v 'existing_calendars.txt')" ]; then
+            echo "Changes detected in calendar files"
             
             # Commit and push changes
             git commit -m "Update calendars [skip ci]"
             git push origin HEAD:main
             echo "Calendar updates committed and pushed successfully"
           else
-            echo "No changes detected"
+            echo "No calendar changes detected"
           fi
