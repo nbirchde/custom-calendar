@@ -40,36 +40,34 @@ jobs:
       - name: Clean calendars
         run: |
           mkdir -p calendars
-          rm -rf calendars/*.ics
+          # Track files before deleting them to ensure Git knows they were deleted
+          if [ "$(ls -A calendars)" ]; then
+            git rm -r --cached calendars/*.ics || true
+            rm -rf calendars/*.ics
+          fi
         
       - name: Run update script
         run: python3 update_calendar.py
         
-      - name: Verify changes
-        id: verify
+      - name: Stage and commit changes
         run: |
-          # Remove any debug file that might have been created
+          # Remove any debug info file if created
           if [[ -f "debug_info.txt" ]]; then
             rm debug_info.txt
           fi
           
-          # Track all calendar changes including deletions
+          # Add all changes including new, modified, and deleted files
           git add --all calendars/
           
-          # Check if there are changes and store the result
+          # Check if there are changes
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "Changes detected in these files:"
             git status --porcelain
+            
+            # Commit the changes
+            git commit -m "Update calendars [skip ci]"
+            git push origin HEAD:main
+            echo "Calendar updates committed and pushed successfully"
           else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes detected"
           fi
-          
-      - name: Commit and push if changed
-        if: steps.verify.outputs.has_changes == 'true'
-        run: |
-          echo "Committing changes..."
-          git commit -m "Update calendars [skip ci]"
-          git push origin HEAD:main
-          echo "Calendar updates committed and pushed successfully"
