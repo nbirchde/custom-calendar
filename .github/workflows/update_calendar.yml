@@ -37,34 +37,45 @@ jobs:
           git config advice.detachedHead false
           git checkout -B workflow-run
         
-      - name: Clean calendars
+      - name: Record existing files
         run: |
+          # Create a list of existing calendar files for comparison later
           mkdir -p calendars
-          # Track files before deleting them to ensure Git knows they were deleted
-          if [ "$(ls -A calendars)" ]; then
-            git rm -r --cached calendars/*.ics || true
-            rm -rf calendars/*.ics
-          fi
+          find calendars -name "*.ics" > existing_calendars.txt || echo "No existing calendars found"
         
-      - name: Run update script
-        run: python3 update_calendar.py
-        
-      - name: Stage and commit changes
+      - name: Clean and run update script
         run: |
+          # Clean directory first
+          mkdir -p calendars
+          rm -rf calendars/*.ics
+          
+          # Run the update script
+          python3 update_calendar.py
+          
           # Remove any debug info file if created
           if [[ -f "debug_info.txt" ]]; then
             rm debug_info.txt
           fi
           
-          # Add all changes including new, modified, and deleted files
-          git add --all calendars/
+      - name: Detect and commit changes
+        run: |
+          # Detect which files existed before but don't exist now
+          for file in $(cat existing_calendars.txt); do
+            if [ ! -f "$file" ]; then
+              echo "Detected deleted file: $file"
+              git rm -f "$file" || echo "File $file was not tracked"
+            fi
+          done
           
-          # Check if there are changes
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "Changes detected in these files:"
+          # Add all new and modified files
+          git add calendars/*.ics
+          
+          # Check if there are changes to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Changes detected:"
             git status --porcelain
             
-            # Commit the changes
+            # Commit and push changes
             git commit -m "Update calendars [skip ci]"
             git push origin HEAD:main
             echo "Calendar updates committed and pushed successfully"
