@@ -164,24 +164,11 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
             calendars[cal_key].add_component(new_event)
             processed_events += 1
     
-    # Add git revision to timestamp to ensure uniqueness
-    current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    git_rev = get_git_revision()
-    unique_id = f"{current_time}-{git_rev}"
-    
     # Écrire chaque calendrier dans un fichier séparé
     for (course_name, event_type), cal in calendars.items():
         filename = f"{prefix}_{course_name}_{event_type}.ics"
         filepath = os.path.join(output_dir, filename)
         
-        # Add unique identifier to calendar name for first event
-        for component in cal.subcomponents:
-            if component.name == "VEVENT":
-                # Modify the first event's summary to include unique identifier
-                old_summary = component.get("summary", "")
-                component["summary"] = f"{old_summary} (Updated {unique_id})"
-                break  # Only modify the first event
-                
         with open(filepath, "wb") as f:
             f.write(cal.to_ical())
         print(f"Created {filename}")
