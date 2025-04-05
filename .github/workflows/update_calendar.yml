@@ -48,8 +48,13 @@ jobs:
       - name: Verify changes
         id: verify
         run: |
-          # Stage only calendar files
-          git add calendars/*.ics
+          # Remove any debug file that might have been created
+          if [[ -f "debug_info.txt" ]]; then
+            rm debug_info.txt
+          fi
+          
+          # Track all calendar changes including deletions
+          git add --all calendars/
           
           # Check if there are changes and store the result
           if [[ -n "$(git status --porcelain)" ]]; then

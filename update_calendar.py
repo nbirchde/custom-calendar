@@ -181,24 +181,6 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
 def process_all_calendars():
     output_dir = "calendars"
     
-    # Write debugging information to a file
-    with open("debug_info.txt", "w") as debug_file:
-        # Log the current Git commit
-        try:
-            git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
-            debug_file.write(f"Current Git commit: {git_commit}\n")
-        except Exception as e:
-            debug_file.write(f"Error getting Git commit: {str(e)}\n")
-        
-        # Log environment information
-        debug_file.write(f"Current directory: {os.getcwd()}\n")
-        debug_file.write(f"Directory contents: {os.listdir()}\n")
-        debug_file.write(f"Environment variables: {os.environ}\n")
-        
-        # Force unique output for each run
-        debug_file.write(f"Run timestamp: {datetime.datetime.now().isoformat()}\n")
-        debug_file.write(f"Random identifier: {''.join(random.choices(string.ascii_uppercase + string.digits, k=32))}\n")
-    
     # Ensure the output directory exists and is empty
     if os.path.exists(output_dir):
         for file_name in os.listdir(output_dir):
