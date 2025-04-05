@@ -45,6 +45,13 @@ jobs:
         
       - name: Clean and run update script
         run: |
+          # First remove problematic file if it exists (fix for ELECH3002)
+          if [ -f "calendars/friend_calendar_ELECH3002_th.ics" ]; then
+            echo "Removing problematic file manually"
+            git rm -f calendars/friend_calendar_ELECH3002_th.ics
+            git commit -m "Remove ELECH3002_th.ics file [skip ci]"
+          fi
+          
           # Clean directory first
           mkdir -p calendars
           rm -rf calendars/*.ics
