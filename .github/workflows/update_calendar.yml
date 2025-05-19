@@ -1,12 +1,7 @@
-name: Update Calendar
+name: Update Calendar (DISABLED)
 
-on:
-  schedule:
-    - cron: '*/30 * * * *'  # Runs every 30 minutes
-  workflow_dispatch:
-  push:
-    paths:
-      - 'force_update.txt'
+# Workflow disabled: all triggers removed
+on: {}
 
 jobs:
   update:
