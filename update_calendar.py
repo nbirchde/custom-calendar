@@ -122,7 +122,10 @@ def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
                 new_cal = Calendar()
                 new_cal.add('prodid', f'-//Custom Calendar//{course_code} {event_type}//')
                 new_cal.add('version', '2.0')
+                new_cal.add('calscale', 'GREGORIAN')
+                new_cal.add('method', 'PUBLISH')
                 new_cal.add('x-wr-calname', f'{course_code} - {event_type}')
+                new_cal.add('x-wr-timezone', 'Europe/Brussels')
                 calendars[cal_key] = new_cal
             
             new_event = Event()
