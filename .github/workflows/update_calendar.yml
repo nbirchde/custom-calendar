@@ -1,7 +1,15 @@
-name: Update Calendar (DISABLED)
+name: Update Calendar
 
-# Workflow disabled: all triggers removed
-on: {}
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - update_calendar.py
+      - .github/workflows/update_calendar.yml
 
 jobs:
   update:
@@ -10,14 +18,13 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           clean: true  # Start with a clean state
           ref: ${{ github.ref }}  # Explicitly use the triggering ref
-          token: ${{ secrets.PAT_TOKEN }}
           
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
           
@@ -28,7 +35,6 @@ jobs:
         run: |
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          # Checkout the main branch directly
           git checkout main
         
       - name: Clean directory for fresh rebuild
@@ -50,14 +56,13 @@ jobs:
           
       - name: Commit changes
         run: |
-          # Add all new calendar files
           git add calendars/*.ics
+          git add update_calendar.py
           
           # Check if there are changes to commit
-          if [ -n "$(git status --porcelain | grep -v 'existing_calendars.txt')" ]; then
+          if [ -n "$(git status --porcelain)" ]; then
             echo "Changes detected in calendar files"
             
-            # Commit and push changes to main
             git commit -m "Update calendars [skip ci]"
             git push origin main
             echo "Calendar updates committed and pushed successfully"

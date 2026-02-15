@@ -7,6 +7,16 @@ from icalendar import Calendar, Event
 
 SOURCE_ICS_URL = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri66jQ18564Z61Q5d68tjk51y5Zl81oo6Z9Y1ZnQQ871k07Q247k358164F63Z6A5A2315FEF9t8A08F10E8B87BFQ6.ics"
 
+# Optional short labels for nicer event titles / calendar names.
+SHORT_NAME_BY_CODE = {
+    "ELECH473": "Micro Arch",
+    "INFOH410": "AI Techniques",
+    "INFOH413": "Heuristic Opt",
+    "INFOF422": "Stat ML",
+    "INFOH505": "Cloud",
+    "INFOH422": "Info Coding",
+}
+
 def unescape_ics(text):
     """Un-escape ICS text properly handling backslash escapes."""
     if not text:
@@ -69,6 +79,12 @@ def slugify(value: str) -> str:
     value = re.sub(r"_+", "_", value).strip("_")
     return value
 
+
+def get_display_name(course_code: str, fallback_name: str) -> str:
+    if course_code in SHORT_NAME_BY_CODE:
+        return SHORT_NAME_BY_CODE[course_code]
+    return fallback_name.strip() if fallback_name else course_code
+
 def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -109,6 +125,7 @@ def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
 
             description = str(component.get("description", ""))
             course_name = extract_course_name(description) or course_code
+            display_name = get_display_name(course_code, course_name)
             
             event_type = get_event_type(summary_unescaped)
             if not event_type:
@@ -124,12 +141,12 @@ def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
                 new_cal['VERSION'] = '2.0'
                 new_cal['CALSCALE'] = 'GREGORIAN'
                 new_cal['METHOD'] = 'PUBLISH'
-                new_cal['X-WR-CALNAME'] = f'{course_code} - {event_type}'
+                new_cal['X-WR-CALNAME'] = f'{display_name} ({event_type})'
                 new_cal['X-WR-TIMEZONE'] = 'Europe/Brussels'
                 calendars[cal_key] = new_cal
             
             new_event = Event()
-            new_event.add("summary", f"{course_code} - {course_name} ({event_type})")
+            new_event.add("summary", f"{display_name} ({event_type})")
             
             for date_prop in ["dtstart", "dtend"]:
                 if date_prop in component:
