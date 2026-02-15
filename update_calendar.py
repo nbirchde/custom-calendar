@@ -9,12 +9,12 @@ SOURCE_ICS_URL = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri66jQ18564Z61
 
 # Optional short labels for nicer event titles / calendar names.
 SHORT_NAME_BY_CODE = {
-    "ELECH473": "Micro Arch",
+    "ELECH473": "Microprocessor",
     "INFOH410": "AI Techniques",
     "INFOH413": "Heuristic Opt",
     "INFOF422": "Stat ML",
-    "INFOH505": "Cloud",
-    "INFOH422": "Info Coding",
+    "INFOH505": "Cloud Computing",
+    "INFOH422": "Information Theory",
 }
 
 def unescape_ics(text):
