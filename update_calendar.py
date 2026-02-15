@@ -120,12 +120,12 @@ def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
             cal_key = (course_code, event_type)
             if cal_key not in calendars:
                 new_cal = Calendar()
-                new_cal.add('prodid', f'-//Custom Calendar//{course_code} {event_type}//')
-                new_cal.add('version', '2.0')
-                new_cal.add('calscale', 'GREGORIAN')
-                new_cal.add('method', 'PUBLISH')
-                new_cal.add('x-wr-calname', f'{course_code} - {event_type}')
-                new_cal.add('x-wr-timezone', 'Europe/Brussels')
+                new_cal['PRODID'] = f'-//Custom Calendar//{course_code} {event_type}//'
+                new_cal['VERSION'] = '2.0'
+                new_cal['CALSCALE'] = 'GREGORIAN'
+                new_cal['METHOD'] = 'PUBLISH'
+                new_cal['X-WR-CALNAME'] = f'{course_code} - {event_type}'
+                new_cal['X-WR-TIMEZONE'] = 'Europe/Brussels'
                 calendars[cal_key] = new_cal
             
             new_event = Event()
