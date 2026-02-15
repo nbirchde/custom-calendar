@@ -1,0 +1,113 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Custom Calendar//INFOH422 Theory//
+X-WR-CALNAME:INFOH422 - Theory
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260211T090000Z
+DTEND:20260211T110000Z
+DTSTAMP:20260215T153233Z
+UID:1294948-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: CERF Nicolas\nID 1294948
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.UB4.228
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260213T130000Z
+DTEND:20260213T150000Z
+DTSTAMP:20260215T153233Z
+UID:1295369-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: ROLAND Jérémie\nID 1295369
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.R42.5.110 - Auditoire BERHEIM (2) (bâtiment R)
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260218T090000Z
+DTEND:20260218T110000Z
+DTSTAMP:20260215T153233Z
+UID:1296244-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: CERF Nicolas\nID 1296244
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.UB4.228
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260220T130000Z
+DTEND:20260220T150000Z
+DTSTAMP:20260215T153233Z
+UID:1295166-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: ROLAND Jérémie\nID 1295166
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.R42.5.110 - Auditoire BERHEIM (2) (bâtiment R)
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260225T090000Z
+DTEND:20260225T110000Z
+DTSTAMP:20260215T153233Z
+UID:1295291-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: CERF Nicolas\nID 1295291
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.UB4.228
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260304T090000Z
+DTEND:20260304T110000Z
+DTSTAMP:20260215T153233Z
+UID:1297658-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: CERF Nicolas\nID 1297658
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.UB4.228
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260306T130000Z
+DTEND:20260306T150000Z
+DTSTAMP:20260215T153233Z
+UID:1371342-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: ROLAND Jérémie\nID 1371342
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.R42.5.110 - Auditoire BERHEIM (2) (bâtiment R)
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260311T090000Z
+DTEND:20260311T110000Z
+DTSTAMP:20260215T153233Z
+UID:1294777-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: CERF Nicolas\nID 1294777
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.UB4.228
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:INFOH422 - Theory of information coding computing and complexity (
+ Theory)
+DTSTART:20260313T130000Z
+DTEND:20260313T150000Z
+DTSTAMP:20260215T153233Z
+UID:1371343-1537855481-0@timeedit.com
+DESCRIPTION:Theory of information coding computing and complexity \nEnseig
+ nant: ROLAND Jérémie\nID 1371343
+LAST-MODIFIED:20260215T153233Z
+LOCATION:S.R42.5.110 - Auditoire BERHEIM (2) (bâtiment R)
+END:VEVENT
+END:VCALENDAR

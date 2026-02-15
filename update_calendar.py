@@ -1,34 +1,11 @@
+import os
+import re
+from typing import Optional, Tuple
+
 import requests
 from icalendar import Calendar, Event
-import re
-import os
-import shutil
-import datetime  # Adding datetime import for timestamp
-import random    # For random value to ensure uniqueness
-import string    # For generating random strings
-import subprocess
 
-# Mapping complet des cours - original calendar
-original_course_mapping = {
-    "INFOH3000": "RO",         # Recherche Opérationnelle
-    "INFOH303": "BD",          # Base de données
-    "INFOF307": "GL",          # Génie Logiciel
-    "ELECH310": "DE",          # Digital Electronics
-    "TRANH3001": "Éthique"     # Éthique
-}
-
-# Mapping complet des cours - friend's calendar
-friend_course_mapping = {
-    "ELECH310": "ELECH310",    # Digital Electronics
-    "ELECH312": "ELECH312",    # Power Electronics
-    "ELECH313": "ELECH313",    # Instrumentation
-    "ELECH3002": "ELECH3002",  # Instrumentation et Automatique
-    "ELECH314": "ELECH314",    # Advanced Instrumentation
-    "MATHH304": "MATHH304",    # Automatique (Control Systems)
-    "MECAH305": "MECAH305",    # Fluid mechanics II
-    "TRANH3001": "TRANH3001",  # Ethics
-    "BINGF3004": "BINGF3004"   # Scientific English
-}
+SOURCE_ICS_URL = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri66jQ18564Z61Q5d68tjk51y5Zl81oo6Z9Y1ZnQQ871k07Q247k358164F63Z6A5A2315FEF9t8A08F10E8B87BFQ6.ics"
 
 def unescape_ics(text):
     """Un-escape ICS text properly handling backslash escapes."""
@@ -43,14 +20,18 @@ def unescape_ics(text):
     return text
 
 def get_event_type(summary):
-    """Return appropriate event type label."""
+    """Return normalized event type label."""
     summary_lower = summary.lower()
-    if "théorie" in summary_lower:
-        return "th"
-    elif "travaux pratiques" in summary_lower:
-        return "Labo"
-    elif "exercices" in summary_lower:
-        return "ex"
+    if "théorie" in summary_lower or "theory" in summary_lower:
+        return "Theory"
+    if "travaux pratiques" in summary_lower or "labo" in summary_lower or "lab" in summary_lower:
+        return "Lab"
+    if "exercices" in summary_lower or "exercise" in summary_lower:
+        return "Exercises"
+    if "projet" in summary_lower or "project" in summary_lower:
+        return "Project"
+    if "séminaire" in summary_lower or "seminar" in summary_lower:
+        return "Seminar"
     return ""
 
 def clean_location(location):
@@ -62,25 +43,33 @@ def clean_location(location):
         location = location[7:]
     return location
 
-def clean_faculty_info(text):
-    """Remove faculty-related text."""
-    if not text:
-        return text
-    text = re.sub(r'Electromécanique [0-9]+', '', text)
-    text = re.sub(r'B-IRCI:?\d*\s*-?\s*[^,]*', '', text)
-    text = re.sub(r'B-[A-Z]+:[0-9]+', '', text)
-    text = re.sub(r'\s*,\s*,\s*', ', ', text)
-    text = re.sub(r'\s*-?\s*$', '', text)
-    text = re.sub(r',\s*$', '', text)  # Supprime la virgule finale
-    return text.strip()
+def extract_course_code(summary: str) -> Optional[str]:
+    match = re.search(r"\b([A-Z]{4,}\d{2,}[A-Z0-9]*)\b", summary)
+    if match:
+        return match.group(1)
+    return None
 
-def get_git_revision():
-    try:
-        return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()[:8]
-    except:
-        return 'nogit'
 
-def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar"):
+def extract_course_name(description: str) -> str:
+    """
+    Try to extract explicit course name from DESCRIPTION first line.
+    Example: "Techniques of Artificial Intelligence \nEnseignant: ..."
+    """
+    if not description:
+        return ""
+    desc = unescape_ics(str(description)).strip()
+    first_line = desc.splitlines()[0].strip() if desc.splitlines() else ""
+    first_line = re.sub(r"\s+", " ", first_line)
+    return first_line
+
+
+def slugify(value: str) -> str:
+    value = value.lower().strip()
+    value = re.sub(r"[^a-z0-9]+", "_", value)
+    value = re.sub(r"_+", "_", value).strip("_")
+    return value
+
+def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
@@ -99,34 +88,27 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
         calendar_data = response.text
     
     old_cal = Calendar.from_ical(calendar_data)
-    calendars = {}
+    calendars: dict[Tuple[str, str], Calendar] = {}
     processed_events = 0
     skipped_events = 0
 
     for component in old_cal.walk():
         if component.name == "VEVENT":
-            summary_raw = str(component.get("summary", ""))
+            summary_raw = str(component.get("summary", "")).strip()
             summary_unescaped = unescape_ics(summary_raw)
             
             if summary_unescaped.startswith("Info:"):
                 skipped_events += 1
                 continue
             
-            # Trouver le code du cours dans le résumé
-            course_code = None
-            course_name = None
-            
-            # Chercher une correspondance exacte dans le mapping
-            for code, name in course_mapping.items():
-                if code in summary_unescaped:
-                    course_code = code
-                    course_name = name
-                    break
-            
-            if not course_name:
+            course_code = extract_course_code(summary_unescaped)
+            if not course_code:
                 print(f"Skipping unknown course: {summary_unescaped}")
                 skipped_events += 1
                 continue
+
+            description = str(component.get("description", ""))
+            course_name = extract_course_name(description) or course_code
             
             event_type = get_event_type(summary_unescaped)
             if not event_type:
@@ -134,39 +116,38 @@ def update_calendar(ics_url, output_dir, course_mapping, prefix="custom_calendar
                 skipped_events += 1
                 continue
             
-            # Créer une clé unique pour ce cours et ce type d'événement
-            cal_key = (course_name, event_type)
+            # One subscription per course + activity type
+            cal_key = (course_code, event_type)
             if cal_key not in calendars:
                 new_cal = Calendar()
-                new_cal.add('prodid', f'-//Custom Calendar//{course_name} {event_type}//')
+                new_cal.add('prodid', f'-//Custom Calendar//{course_code} {event_type}//')
                 new_cal.add('version', '2.0')
+                new_cal.add('x-wr-calname', f'{course_code} - {event_type}')
                 calendars[cal_key] = new_cal
             
-            # Créer le nouvel événement
             new_event = Event()
-            new_event.add("summary", f"{course_name} {event_type}")
+            new_event.add("summary", f"{course_code} - {course_name} ({event_type})")
             
-            # Copier les dates
             for date_prop in ["dtstart", "dtend"]:
                 if date_prop in component:
                     new_event.add(date_prop, component[date_prop].dt)
             
-            # Nettoyer et ajouter l'emplacement
             location = clean_location(component.get("location", ""))
             if location:
                 new_event.add("location", location)
             
-            # Copier les propriétés essentielles
             for prop in ["UID", "DTSTAMP", "LAST-MODIFIED"]:
                 if prop in component:
                     new_event.add(prop, component[prop])
+
+            if "description" in component:
+                new_event.add("description", component["description"])
             
             calendars[cal_key].add_component(new_event)
             processed_events += 1
     
-    # Écrire chaque calendrier dans un fichier séparé
-    for (course_name, event_type), cal in calendars.items():
-        filename = f"{prefix}_{course_name}_{event_type}.ics"
+    for (course_code, event_type), cal in calendars.items():
+        filename = f"{prefix}_{course_code}_{slugify(event_type)}.ics"
         filepath = os.path.join(output_dir, filename)
         
         with open(filepath, "wb") as f:
@@ -190,13 +171,7 @@ def process_all_calendars():
     else:
         os.makedirs(output_dir)
 
-    # Process your calendar
-    your_calendar_url = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri69j598Y63161QZd6Qtjk5QZ58l18oo6Z971ZnyQ751k07Q247k398F70650Z3E55028C01F2t5B75EDCC98B771Q.ics"
-    update_calendar(your_calendar_url, output_dir, original_course_mapping, "custom_calendar")
-    
-    # Process your friend's calendar
-    friend_calendar_url = "webcal://cloud.timeedit.net/be_ulb/web/etudiant/ri666XQZ699Z5QQv2902X2t6y7Y790n39Y1963gQY074Z70ZQdj7150jZ3mQk9n0k1EA8C4966n0oAn54FC664B22jA777Ft04F245847BED5004.ics"
-    update_calendar(friend_calendar_url, output_dir, friend_course_mapping, "friend_calendar")
+    update_calendar(SOURCE_ICS_URL, output_dir, "custom_calendar")
 
 if __name__ == "__main__":
     process_all_calendars()

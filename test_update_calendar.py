@@ -8,9 +8,9 @@ from update_calendar import (
     unescape_ics, 
     get_event_type, 
     clean_location, 
-    clean_faculty_info,
+    extract_course_code,
+    extract_course_name,
     update_calendar,
-    original_course_mapping
 )
 
 class TestCalendarFunctions(unittest.TestCase):
@@ -22,9 +22,9 @@ class TestCalendarFunctions(unittest.TestCase):
         self.assertEqual(unescape_ics(None), "")
 
     def test_get_event_type(self):
-        self.assertEqual(get_event_type("INFOH3000 - Théorie"), "th")
-        self.assertEqual(get_event_type("INFOH303 - Travaux pratiques"), "Labo")
-        self.assertEqual(get_event_type("INFOH3000 - Exercices"), "ex")
+        self.assertEqual(get_event_type("INFOH3000 - Théorie"), "Theory")
+        self.assertEqual(get_event_type("INFOH303 - Travaux pratiques"), "Lab")
+        self.assertEqual(get_event_type("INFOH3000 - Exercices"), "Exercises")
         self.assertEqual(get_event_type("Random event"), "")
 
     def test_clean_location(self):
@@ -33,11 +33,14 @@ class TestCalendarFunctions(unittest.TestCase):
         self.assertEqual(clean_location(""), "")
         self.assertEqual(clean_location(None), "")
 
-    def test_clean_faculty_info(self):
-        self.assertEqual(clean_faculty_info("RO, Electromécanique 3"), "RO")
-        self.assertEqual(clean_faculty_info("BD, B-IRCI:3"), "BD")
-        self.assertEqual(clean_faculty_info("GL, B-INFO:3"), "GL")
-        self.assertEqual(clean_faculty_info(None), None)
+    def test_extract_course_code(self):
+        self.assertEqual(extract_course_code("INFOH410, Théorie"), "INFOH410")
+        self.assertEqual(extract_course_code("ELECH473 - Lab"), "ELECH473")
+        self.assertIsNone(extract_course_code("No course code here"))
+
+    def test_extract_course_name(self):
+        desc = "Techniques of Artificial Intelligence \\nEnseignant: SACHARIDIS"
+        self.assertEqual(extract_course_name(desc), "Techniques of Artificial Intelligence")
 
     @patch('update_calendar.requests.get')
     def test_update_calendar_basic(self, mock_get):
@@ -64,7 +67,7 @@ class TestCalendarFunctions(unittest.TestCase):
         test_dir = "test_calendars"
         
         try:
-            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
+            update_calendar("https://example.com/calendar.ics", test_dir)
             
             self.assertTrue(os.path.exists(test_dir))
             files = os.listdir(test_dir)
@@ -107,7 +110,7 @@ class TestCalendarFunctions(unittest.TestCase):
         test_dir = "test_calendars"
         try:
             # Première mise à jour
-            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
+            update_calendar("https://example.com/calendar.ics", test_dir)
             
             # Vérifier le contenu initial
             files = os.listdir(test_dir)
@@ -146,7 +149,7 @@ class TestCalendarFunctions(unittest.TestCase):
             mock_response.text = updated_cal.to_ical().decode('utf-8')
             
             # Deuxième mise à jour
-            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
+            update_calendar("https://example.com/calendar.ics", test_dir)
             
             # Vérifier les mises à jour
             files = os.listdir(test_dir)
@@ -210,7 +213,7 @@ class TestCalendarFunctions(unittest.TestCase):
         
         test_dir = "test_calendars"
         try:
-            update_calendar("https://example.com/calendar.ics", test_dir, original_course_mapping)
+            update_calendar("https://example.com/calendar.ics", test_dir)
             
             # Vérifier que seul l'événement valide a été traité
             events = []
