@@ -85,6 +85,18 @@ def get_display_name(course_code: str, fallback_name: str) -> str:
         return SHORT_NAME_BY_CODE[course_code]
     return fallback_name.strip() if fallback_name else course_code
 
+
+def should_keep_event(course_code: str, event_type: str, summary: str) -> bool:
+    """
+    Keep only the student's ELECH473 lab group using stable metadata tokens.
+    - Keep group: M-INFOS:1 / M-IRIFS:1
+    - Drop other group: M-SECUS:2 / M-IRELE:1
+    """
+    if course_code == "ELECH473" and event_type == "Lab":
+        summary_upper = summary.upper()
+        return "M-INFOS:1" in summary_upper or "M-IRIFS:1" in summary_upper
+    return True
+
 def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -130,6 +142,10 @@ def update_calendar(ics_url, output_dir, prefix="custom_calendar"):
             event_type = get_event_type(summary_unescaped)
             if not event_type:
                 print(f"Skipping event without recognized type: {summary_unescaped}")
+                skipped_events += 1
+                continue
+
+            if not should_keep_event(course_code, event_type, summary_unescaped):
                 skipped_events += 1
                 continue
             
