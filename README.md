@@ -1,17 +1,48 @@
-This project rebuilds a TimeEdit `.ics` feed into multiple subscription files (one file per course + activity type), so each can have a different color in your calendar app.
+# custom-calendar
 
-Current source feed:
-- ULB TimeEdit student feed configured in `update_calendar.py`
+Rebuilds the ULB TimeEdit timetable into one `.ics` file per course and
+activity type, so each can be subscribed to separately with its own colour
+in Google Calendar or Apple Calendar. A GitHub Action refreshes the files
+every 6 hours.
 
-What it does:
-- reads all events from the source `.ics`
-- extracts course code (example: `INFOH410`)
-- extracts explicit course title from event description
-- detects activity type (`Theory`, `Lab`, `Exercises`, etc.)
-- writes one output `.ics` per `(course code, activity type)` in [calendars/](calendars)
+## Subscribe
 
-Run:
-- `python update_calendar.py`
+Use the raw GitHub URL of a file under [calendars/](calendars):
 
-Tests:
-- `python -m unittest -v`
+```
+https://raw.githubusercontent.com/nbirchde/custom-calendar/main/calendars/<file>.ics
+```
+
+Google Calendar: Other calendars → `+` → From URL → paste. Google refreshes
+URL subscriptions roughly once a day. Apple Calendar: File → New Calendar
+Subscription.
+
+`custom_calendar_all.ics` contains every course in one file.
+
+## How it works
+
+`update_calendar.py`:
+
+- fetches the public TimeEdit "Horaire par cours" feed for the course object
+  ids listed in `TIMEEDIT_OBJECT_IDS` (no login required)
+- drops holidays, untitled break days and courses not in `COURSES`
+- keeps only the student's group for split sessions (`GROUP_FILTERS`)
+- writes `calendars/custom_calendar_<CODE>_<type>.ics` plus a merged file
+
+## New academic year
+
+1. Find each course's object id: open
+   `https://cloud.timeedit.net/be_ulb/web/public/ri1Q50.html`, search the
+   mnemonic, and read `data-idonly` for the entry ending in the new year
+   (or query `objects.html?sid=10&types=5&partajax=t&search_text=<CODE>`).
+2. Update `TIMEEDIT_OBJECT_IDS`, `TIMEEDIT_PERIOD`, `COURSES` and
+   `GROUP_FILTERS`.
+3. Push. The workflow runs on changes to the script and on schedule.
+
+## Run locally
+
+```
+python -m pip install requests icalendar
+python -m unittest -v
+python update_calendar.py
+```

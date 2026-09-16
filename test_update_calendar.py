@@ -1,234 +1,169 @@
-import unittest
 import os
 import shutil
-from unittest.mock import patch, MagicMock
-from icalendar import Calendar, Event, vDatetime
-from datetime import datetime, timedelta
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
+
+from icalendar import Calendar, Event
+
 from update_calendar import (
-    unescape_ics, 
-    get_event_type, 
-    clean_location, 
+    SOURCE_ICS_URL,
+    clean_location,
     extract_course_code,
     extract_course_name,
+    extract_teacher,
+    get_event_type,
+    should_keep_event,
+    unescape_ics,
     update_calendar,
 )
 
-class TestCalendarFunctions(unittest.TestCase):
+FEED_SUMMARY = "INFOF403, Théorie, Enseignant: GEERAERTS Gilles, M-INFOS:1, M-IRIFS:1"
+
+
+def make_event(summary, uid, description="", location="", days=0):
+    ev = Event()
+    ev.add("summary", summary)
+    start = datetime(2026, 9, 15, 8, 0, tzinfo=timezone.utc) + timedelta(days=days)
+    ev.add("dtstart", start)
+    ev.add("dtend", start + timedelta(hours=2))
+    if location:
+        ev.add("location", location)
+    if description:
+        ev.add("description", description)
+    ev.add("uid", uid)
+    ev.add("dtstamp", start)
+    return ev
+
+
+def make_feed(*events):
+    cal = Calendar()
+    cal.add("prodid", "-//TimeEdit//")
+    cal.add("version", "2.0")
+    for ev in events:
+        cal.add_component(ev)
+    return cal.to_ical().decode("utf-8")
+
+
+def read_events(directory):
+    out = {}
+    for name in sorted(os.listdir(directory)):
+        with open(os.path.join(directory, name), "rb") as f:
+            cal = Calendar.from_ical(f.read())
+        out[name] = [e for e in cal.walk("VEVENT")]
+    return out
+
+
+class TestHelpers(unittest.TestCase):
     def test_unescape_ics(self):
-        self.assertEqual(unescape_ics("test\\, text"), "test, text")
-        self.assertEqual(unescape_ics("test\\; text"), "test; text")
-        self.assertEqual(unescape_ics("test\\n text"), "test\n text")
-        self.assertEqual(unescape_ics("test\\\\ text"), "test text")  # Nous supprimons tous les backslashes
+        self.assertEqual(unescape_ics("a\\, b"), "a, b")
+        self.assertEqual(unescape_ics("a\\; b"), "a; b")
+        self.assertEqual(unescape_ics("a\\nb"), "a\nb")
         self.assertEqual(unescape_ics(None), "")
 
     def test_get_event_type(self):
-        self.assertEqual(get_event_type("INFOH3000 - Théorie"), "Theory")
-        self.assertEqual(get_event_type("INFOH303 - Travaux pratiques"), "Lab")
-        self.assertEqual(get_event_type("INFOH3000 - Exercices"), "Exercises")
+        self.assertEqual(get_event_type("INFOF403, Théorie"), "Theory")
+        self.assertEqual(get_event_type("ELECH417, Travaux pratiques"), "Lab")
+        self.assertEqual(get_event_type("INFOH417, Exercices"), "Exercises")
+        self.assertEqual(get_event_type("PROJH402, Projet"), "Project")
         self.assertEqual(get_event_type("Random event"), "")
 
     def test_clean_location(self):
-        self.assertEqual(clean_location("Salle: H.1302, Campus de la Plaine"), "H.1302")
-        self.assertEqual(clean_location("H.1302, Campus"), "H.1302")
-        self.assertEqual(clean_location(""), "")
+        self.assertEqual(clean_location("P.NO4.008 (PC)\\, P.NO4.009"), "P.NO4.008 (PC)")
+        self.assertEqual(clean_location("Salle: H.1302, Campus"), "H.1302")
         self.assertEqual(clean_location(None), "")
 
     def test_extract_course_code(self):
-        self.assertEqual(extract_course_code("INFOH410, Théorie"), "INFOH410")
-        self.assertEqual(extract_course_code("ELECH473 - Lab"), "ELECH473")
-        self.assertIsNone(extract_course_code("No course code here"))
+        self.assertEqual(extract_course_code(FEED_SUMMARY), "INFOF403")
+        self.assertEqual(extract_course_code("ELECH417, Travaux pratiques"), "ELECH417")
+        self.assertIsNone(extract_course_code("Info: Toussaint"))
 
     def test_extract_course_name(self):
-        desc = "Techniques of Artificial Intelligence \\nEnseignant: SACHARIDIS"
-        self.assertEqual(extract_course_name(desc), "Techniques of Artificial Intelligence")
+        self.assertEqual(
+            extract_course_name("Introduction to language theory and compiling\\nID 1514188"),
+            "Introduction to language theory and compiling",
+        )
+        # Untitled break events carry a date range instead of a title.
+        self.assertEqual(extract_course_name("01/11/2026 23:00 - 02/11/2026 23:00\\nID 1"), "")
 
-    @patch('update_calendar.requests.get')
-    def test_update_calendar_basic(self, mock_get):
-        """Test de base pour la création de calendriers"""
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        
-        cal = Calendar()
-        cal.add('prodid', '-//Test Calendar//')
-        cal.add('version', '2.0')
-        
-        event = Event()
-        event.add('summary', 'INFOH3000 - Théorie')
-        event.add('dtstart', datetime.now())
-        event.add('dtend', datetime.now() + timedelta(hours=2))
-        event.add('location', 'Salle: H.1302, Campus')
-        event.add('uid', '12345')
-        event.add('dtstamp', datetime.now())
-        cal.add_component(event)
-        
-        mock_response.text = cal.to_ical().decode('utf-8')
-        mock_get.return_value = mock_response
-        
-        test_dir = "test_calendars"
-        
-        try:
-            update_calendar("https://example.com/calendar.ics", test_dir)
-            
-            self.assertTrue(os.path.exists(test_dir))
-            files = os.listdir(test_dir)
-            self.assertGreater(len(files), 0)
-            
-            with open(os.path.join(test_dir, files[0]), 'rb') as f:
-                test_cal = Calendar.from_ical(f.read())
-                events = [e for e in test_cal.walk() if e.name == 'VEVENT']
-                self.assertEqual(len(events), 1)
-                
-        finally:
-            if os.path.exists(test_dir):
-                shutil.rmtree(test_dir)
+    def test_extract_teacher(self):
+        self.assertEqual(extract_teacher(FEED_SUMMARY), "GEERAERTS Gilles")
+        self.assertEqual(extract_teacher("INFOF403, Théorie"), "")
 
-    @patch('update_calendar.requests.get')
-    def test_calendar_sync(self, mock_get):
-        """Test de synchronisation avec TimeEdit"""
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        
-        # Créer un calendrier initial
-        initial_cal = Calendar()
-        initial_cal.add('prodid', '-//Test Calendar//')
-        initial_cal.add('version', '2.0')
-        
-        # Ajouter un événement initial
-        initial_event = Event()
-        initial_event.add('summary', 'INFOH3000 - Théorie')
-        initial_event.add('dtstart', datetime.now())
-        initial_event.add('dtend', datetime.now() + timedelta(hours=2))
-        initial_event.add('location', 'Salle: H.1302, Campus')
-        initial_event.add('uid', '12345')
-        initial_event.add('dtstamp', datetime.now())
-        initial_cal.add_component(initial_event)
-        
-        # Premier appel - calendrier initial
-        mock_response.text = initial_cal.to_ical().decode('utf-8')
-        mock_get.return_value = mock_response
-        
-        test_dir = "test_calendars"
-        try:
-            # Première mise à jour
-            update_calendar("https://example.com/calendar.ics", test_dir)
-            
-            # Vérifier le contenu initial
-            files = os.listdir(test_dir)
-            initial_events = []
-            for f in files:
-                with open(os.path.join(test_dir, f), 'rb') as cal_file:
-                    cal = Calendar.from_ical(cal_file.read())
-                    initial_events.extend([e for e in cal.walk() if e.name == 'VEVENT'])
-            
-            # Créer un calendrier mis à jour
-            updated_cal = Calendar()
-            updated_cal.add('prodid', '-//Test Calendar//')
-            updated_cal.add('version', '2.0')
-            
-            # Modifier l'événement existant
-            updated_event = Event()
-            updated_event.add('summary', 'INFOH3000 - Théorie')
-            updated_event.add('dtstart', datetime.now() + timedelta(days=1))  # Nouvelle date
-            updated_event.add('dtend', datetime.now() + timedelta(days=1, hours=2))
-            updated_event.add('location', 'Salle: H.1309, Campus')  # Nouvelle salle
-            updated_event.add('uid', '12345')
-            updated_event.add('dtstamp', datetime.now())
-            updated_cal.add_component(updated_event)
-            
-            # Ajouter un nouvel événement
-            new_event = Event()
-            new_event.add('summary', 'INFOH3000 - Exercices')
-            new_event.add('dtstart', datetime.now() + timedelta(days=2))
-            new_event.add('dtend', datetime.now() + timedelta(days=2, hours=2))
-            new_event.add('location', 'Salle: H.1302, Campus')
-            new_event.add('uid', '12346')
-            new_event.add('dtstamp', datetime.now())
-            updated_cal.add_component(new_event)
-            
-            # Deuxième appel - calendrier mis à jour
-            mock_response.text = updated_cal.to_ical().decode('utf-8')
-            
-            # Deuxième mise à jour
-            update_calendar("https://example.com/calendar.ics", test_dir)
-            
-            # Vérifier les mises à jour
-            files = os.listdir(test_dir)
-            updated_events = []
-            for f in files:
-                with open(os.path.join(test_dir, f), 'rb') as cal_file:
-                    cal = Calendar.from_ical(cal_file.read())
-                    updated_events.extend([e for e in cal.walk() if e.name == 'VEVENT'])
-            
-            # Vérifications
-            self.assertGreater(len(updated_events), len(initial_events), "De nouveaux événements devraient être ajoutés")
-            
-            # Vérifier que l'événement mis à jour a bien été modifié
-            updated_theory = None
-            for event in updated_events:
-                if event.get('uid') == '12345':
-                    updated_theory = event
-                    break
-            
-            self.assertIsNotNone(updated_theory, "L'événement original devrait toujours exister")
-            self.assertEqual(clean_location(updated_theory.get('location')), 'H.1309', 
-                           "La localisation devrait être mise à jour")
-            
-        finally:
-            if os.path.exists(test_dir):
-                shutil.rmtree(test_dir)
+    def test_group_filter(self):
+        self.assertTrue(should_keep_event("ELECH417", "Lab", "ELECH417, Travaux pratiques, M-IRIFS:1, M-IRCBS:2"))
+        self.assertFalse(should_keep_event("ELECH417", "Lab", "ELECH417, Travaux pratiques, B-INFO:3"))
+        self.assertFalse(should_keep_event("ELECH417", "Lab", "ELECH417, Travaux pratiques, M-IRELE:1"))
+        self.assertTrue(should_keep_event("ELECH417", "Theory", "ELECH417, Théorie, B-INFO:3"))
 
-    @patch('update_calendar.requests.get')
-    def test_event_filtering(self, mock_get):
-        """Test du filtrage des événements"""
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        
-        cal = Calendar()
-        cal.add('prodid', '-//Test Calendar//')
-        cal.add('version', '2.0')
-        
-        # Ajouter un événement Info (devrait être ignoré)
-        info_event = Event()
-        info_event.add('summary', 'Info: Test announcement')
-        info_event.add('dtstart', datetime.now())
-        info_event.add('uid', 'info123')
-        cal.add_component(info_event)
-        
-        # Ajouter un événement valide
-        valid_event = Event()
-        valid_event.add('summary', 'INFOH3000 - Théorie')
-        valid_event.add('dtstart', datetime.now())
-        valid_event.add('uid', 'valid123')
-        cal.add_component(valid_event)
-        
-        # Ajouter un événement non reconnu
-        unknown_event = Event()
-        unknown_event.add('summary', 'UNKNOWN1234 - Something')
-        unknown_event.add('dtstart', datetime.now())
-        unknown_event.add('uid', 'unknown123')
-        cal.add_component(unknown_event)
-        
-        mock_response.text = cal.to_ical().decode('utf-8')
-        mock_get.return_value = mock_response
-        
-        test_dir = "test_calendars"
-        try:
-            update_calendar("https://example.com/calendar.ics", test_dir)
-            
-            # Vérifier que seul l'événement valide a été traité
-            events = []
-            for f in os.listdir(test_dir):
-                with open(os.path.join(test_dir, f), 'rb') as cal_file:
-                    cal = Calendar.from_ical(cal_file.read())
-                    events.extend([e for e in cal.walk() if e.name == 'VEVENT'])
-            
-            self.assertEqual(len(events), 1, "Seul l'événement valide devrait être présent")
-            self.assertEqual(events[0].get('uid'), 'valid123', 
-                           "L'événement conservé devrait être l'événement valide")
-            
-        finally:
-            if os.path.exists(test_dir):
-                shutil.rmtree(test_dir)
+    def test_source_url_is_public_view(self):
+        self.assertIn("/be_ulb/web/public/ri.ics", SOURCE_ICS_URL)
+        self.assertIn("sid=10", SOURCE_ICS_URL)
+        self.assertIn("179271.5", SOURCE_ICS_URL)  # INFOF403 2026-27
 
-if __name__ == '__main__':
+
+class TestUpdateCalendar(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="cal_test_")
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def run_with_feed(self, feed_text):
+        with patch("update_calendar.requests.get") as mock_get:
+            resp = MagicMock()
+            resp.raise_for_status = MagicMock()
+            resp.text = feed_text
+            mock_get.return_value = resp
+            return update_calendar("https://example.com/feed.ics", self.dir)
+
+    def test_splits_by_course_and_type_and_writes_merged(self):
+        feed = make_feed(
+            make_event(FEED_SUMMARY, "1", "Introduction to language theory and compiling\\nID 1", "S.DC2.206"),
+            make_event("INFOF403, Exercices, Enseignant: GEERAERTS Gilles, M-IRIFS:1", "2", days=1),
+            make_event("INFOH417, Théorie, Enseignant: SAKR Mahmoud, M-IRIFS:1", "3", "Database systems architecture\\nID 3", days=2),
+        )
+        stats = self.run_with_feed(feed)
+        files = read_events(self.dir)
+        self.assertEqual(stats["processed"], 3)
+        self.assertEqual(
+            sorted(files),
+            [
+                "custom_calendar_INFOF403_exercises.ics",
+                "custom_calendar_INFOF403_theory.ics",
+                "custom_calendar_INFOH417_theory.ics",
+                "custom_calendar_all.ics",
+            ],
+        )
+        theory = files["custom_calendar_INFOF403_theory.ics"][0]
+        self.assertEqual(str(theory["summary"]), "Compilers (Theory)")
+        self.assertEqual(str(theory["location"]), "S.DC2.206")
+        self.assertIn("INFOF403 - Introduction to language theory and compiling", str(theory["description"]))
+        self.assertIn("Teacher: GEERAERTS Gilles", str(theory["description"]))
+        self.assertEqual(len(files["custom_calendar_all.ics"]), 3)
+
+    def test_filters_noise_and_other_groups(self):
+        feed = make_feed(
+            make_event("Info: Toussaint", "info"),
+            make_event("", "blank", "01/11/2026 23:00 - 02/11/2026 23:00\\nID 9"),
+            make_event("INFOH410, Théorie, Enseignant: X", "notmine"),
+            make_event("ELECH417, Travaux pratiques, Enseignant: DRICOT Jean-Michel, B-INFO:3", "lab-other"),
+            make_event("ELECH417, Travaux pratiques, Enseignant: DRICOT Jean-Michel, M-IRIFS:1, M-IRCBS:2", "lab-mine"),
+        )
+        stats = self.run_with_feed(feed)
+        files = read_events(self.dir)
+        self.assertEqual(stats["processed"], 1)
+        self.assertEqual(stats["unknown_course"], 1)
+        labs = files["custom_calendar_ELECH417_lab.ics"]
+        self.assertEqual([str(e["uid"]) for e in labs], ["lab-mine"])
+
+    def test_rerun_replaces_content(self):
+        self.run_with_feed(make_feed(make_event(FEED_SUMMARY, "1", location="S.DC2.206")))
+        self.run_with_feed(make_feed(make_event(FEED_SUMMARY, "1", location="S.DC2.999")))
+        ev = read_events(self.dir)["custom_calendar_INFOF403_theory.ics"][0]
+        self.assertEqual(str(ev["location"]), "S.DC2.999")
+
+
+if __name__ == "__main__":
     unittest.main()
